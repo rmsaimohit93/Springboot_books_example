@@ -1,56 +1,61 @@
-package com.javatpoint.cpostmanontroller;
+package com.javatpoint.controller;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
+import com.javatpoint.logger.AppLogger;
 import com.javatpoint.model.Books;
+import com.javatpoint.response.BooksResponse;
 import com.javatpoint.service.BooksService;
 
-//mark class as Controller
 @RestController
 public class BooksController {
 
-    //autowire the BooksService class
     @Autowired
     BooksService booksService;
 
-    //creating a get mapping that retrieves all the books detail from the database
     @GetMapping("/book")
-    private List<Books> getAllBooks() {
-        return booksService.getAllBooks();
+    private BooksResponse getAllBooks() {
+        List<Books> books = booksService.getAllBooks();
+        AppLogger.LOGGER.info("All books fetched successfully.");
+        return new BooksResponse("Books fetched successfully.", books);
     }
 
-    //creating a get mapping that retrieves the detail of a specific book
     @GetMapping("/book/{bookid}")
-    private Books getBooks(@PathVariable("bookid") int bookid) {
-        return booksService.getBooksById(bookid);
+    private BooksResponse getBooks(@PathVariable("bookid") int bookid) {
+        Books book = booksService.getBooksById(bookid);
+        if (book != null) {
+            AppLogger.LOGGER.info("Book with ID {} fetched successfully.", bookid);
+            return new BooksResponse("Book fetched successfully.", book);
+        } else {
+            AppLogger.LOGGER.warn("Book with ID {} not found.", bookid);
+            return new BooksResponse("Book with ID " + bookid + " not found.", null);
+        }
     }
 
-    //creating a delete mapping that deletes a specified book
     @DeleteMapping("/book/{bookid}")
-    private void deleteBook(@PathVariable("bookid") int bookid) {
+    private BooksResponse deleteBook(@PathVariable("bookid") int bookid) {
         booksService.delete(bookid);
+        AppLogger.LOGGER.info("Book with ID {} deleted successfully.", bookid);
+        return new BooksResponse("Book with ID " + bookid + " deleted successfully.", null);
     }
 
-    //creating post mapping that post the book detail in the database
     @PostMapping("/books")
-    private Books saveBook(@RequestBody Books books) {
-        booksService.saveOrUpdate(books);
-        return books;
+    private BooksResponse saveBook(@RequestBody Books books) {
+        if (booksService.isBookExistsByName(books.getBookname())) {
+            AppLogger.LOGGER.warn("Book with name '{}' already exists.", books.getBookname());
+            return new BooksResponse("Book already exists in the database", null);
+        } else {
+            booksService.saveOrUpdate(books);
+            AppLogger.LOGGER.info("Book '{}' saved successfully.", books.getBookname());
+            return new BooksResponse("Book saved successfully.", booksService.getAllBooks());
+        }
     }
 
-    //creating put mapping that updates the book detail
     @PutMapping("/books")
-    private Books update(@RequestBody Books books) {
+    private BooksResponse update(@RequestBody Books books) {
         booksService.saveOrUpdate(books);
-        return books;
+        AppLogger.LOGGER.info("Book with ID {} updated successfully.", books.getBookid());
+        return new BooksResponse("Book updated successfully.", books);
     }
 }
